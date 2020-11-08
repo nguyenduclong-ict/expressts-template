@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "typeRoots": ["node_modules/@types", "./src/typings"],
+    "target": "ES2015",
+    "module": "commonjs",
+    "strict": true,
+    "baseUrl": "./src",
+    "outDir": "./build",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}
