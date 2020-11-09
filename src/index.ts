@@ -39,14 +39,31 @@ _.set(global, "tapp", {});
     }
   );
   const router = Router();
+
   routeModules.forEach((item) => {
-    item.module.default.routes.forEach((route: any) => {
-      const api = getRequestFunction(router, route.method);
-      api.call(router, route.path, ...route.middlewares, route.handler);
-    });
+    if (item.module.default) {
+      item.module.default.getConfig().routes.forEach((route: any) => {
+        const api = getRequestFunction(router, route.method);
+        api.call(router, route.path, ...route.middlewares, route.handler);
+      });
+    }
+  });
+  tapp.app.use(router);
+
+  /* HANDLE ERRORS */
+  tapp.app.use((err: any, req: any, res: any, next: any) => {
+    consola.error("HANDLE ERROR", err);
+    if (err) {
+      let code = parseInt(err.code || 500);
+      if (code < 100 || code > 511) {
+        code = 500;
+      }
+      res.status(code).json({ code, message: err.message, errors: err.errors });
+    }
+    next();
   });
 
-  tapp.app.use(router);
+  /* START SERVER */
   tapp.server = http.createServer(tapp.app);
   const host = env("HOST", "localhost");
   const port = env.int("PORT", 3000);

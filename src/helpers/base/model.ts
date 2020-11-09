@@ -1,14 +1,7 @@
 import config from "@/config";
 import _ from "lodash";
-import {
-  Model,
-  Document,
-  model,
-  Schema,
-  FilterQuery,
-  Connection,
-} from "mongoose";
-import { seqPromises, waterFallPromises } from "./utils";
+import { Document, FilterQuery, Model, Schema, Types } from "mongoose";
+import { waterFallPromises } from "./utils";
 
 interface FindOptions<T> {
   query?: FilterQuery<T>;
@@ -46,7 +39,11 @@ interface HookItem {
   handler: string;
 }
 
-export function Hook(trigger: HookTrigger, actions: HookAction | HookAction[]) {
+export function Hook(
+  trigger: HookTrigger,
+  actions: HookAction | HookAction[],
+  prority: number = 0
+) {
   return function (
     target: any,
     propertyKey: string,
@@ -56,13 +53,18 @@ export function Hook(trigger: HookTrigger, actions: HookAction | HookAction[]) {
     target.hooks = target.hooks || [];
 
     actions.forEach((action) => {
-      target.hooks.push({ trigger, action, handler: propertyKey });
+      const newItem = { trigger, action, handler: propertyKey, prority };
+      if (!target.hooks.find((item: any) => _.isEqual(item, newItem))) {
+        target.hooks.push(newItem);
+      }
     });
+
+    target.hooks = target.hooks.sort((a: any, b: any) => a.prority - b.prority);
   };
 }
 
-export interface ListResponse<T extends Document = any> {
-  data: T[];
+export interface ListResponse<D extends Document = any> {
+  data: D[];
   limit: number;
   skip: number;
   page: number;
@@ -70,8 +72,8 @@ export interface ListResponse<T extends Document = any> {
   total: number;
 }
 
-export interface Context<T = any> extends FindOptions<T> {
-  state?: any;
+export interface Context<T, S = any> extends FindOptions<T> {
+  state?: S;
 }
 
 function defaultContext(context: any, df?: any) {
@@ -92,28 +94,33 @@ function defaultContext(context: any, df?: any) {
   context.skip = context.skip || context.limit * (context.page - 1);
 }
 
-export class BaseModel<T extends Document> {
-  model!: Model<T>;
+export class BaseModel<
+  D extends Document,
+  T = Omit<D, keyof Document> & { _id?: any; id?: any }
+> {
+  model!: Model<D>;
 
-  async list(context: Context<T> = {}): Promise<ListResponse<T>> {
+  async list(context: Context<T> = {}): Promise<ListResponse<D>> {
     defaultContext(context);
     const tasks = [
       ...this.getHooks("before", "list").map((func) => () => func(context)),
       async () => {
         const [data, counts] = await Promise.all([
-          this.model.find(
-            context.query as any,
-            undefined,
-            _.pick(context, [
-              "populate",
-              "skip",
-              "limit",
-              "page",
-              "pageSize",
-              "projection",
-              "sort",
-              "session",
-            ]) as any
+          populate(
+            this.model.find(
+              context.query as any,
+              undefined,
+              _.pick(context, [
+                "skip",
+                "limit",
+                "page",
+                "pageSize",
+                "projection",
+                "sort",
+                "session",
+              ]) as any
+            ),
+            context.populate
           ),
           this.model.countDocuments(context.query as any),
         ]);
@@ -170,13 +177,13 @@ export class BaseModel<T extends Document> {
     const tasks = [
       ...this.getHooks("before", "findOne").map((func) => () => func(context)),
       () =>
-        this.model.findOne(
-          context.query as any,
-          undefined,
-          _.omitBy(
-            _.pick(context, ["populate", "projection", "session"]),
-            _.isNil
-          )
+        populate(
+          this.model.findOne(
+            context.query as any,
+            undefined,
+            _.omitBy(_.pick(context, ["projection", "session"]), _.isNil)
+          ),
+          context.populate
         ),
       ...this.getHooks("after", "findOne").map((func) => (response: any) =>
         func(context, response)
@@ -186,7 +193,7 @@ export class BaseModel<T extends Document> {
     return waterFallPromises(tasks);
   }
 
-  create(context: Context<T> = {}) {
+  create(context: Context<T> = {}): Promise<T & T[]> {
     defaultContext(context);
     const tasks = [
       ...this.getHooks("before", "create").map((func) => () => func(context)),
@@ -215,15 +222,18 @@ export class BaseModel<T extends Document> {
               this.model
                 .updateMany(context.query as any, context.data as any)
                 .then(() =>
-                  this.model.find(
-                    {
-                      _id: docs.map((doc) => doc.id),
-                    } as any,
-                    undefined,
-                    _.omitBy(
-                      _.pick(context, ["populate", "projection", "session"]),
-                      _.isNil
-                    ) as any
+                  populate(
+                    this.model.find(
+                      {
+                        _id: docs.map((doc) => doc.id),
+                      } as any,
+                      undefined,
+                      _.omitBy(
+                        _.pick(context, ["projection", "session"]),
+                        _.isNil
+                      ) as any
+                    ),
+                    context.populate
                   )
                 )
             );
@@ -250,13 +260,13 @@ export class BaseModel<T extends Document> {
         func(context)
       ),
       () =>
-        this.model.findOneAndUpdate(
-          context.query as any,
-          context.data as any,
-          _.omitBy(
-            _.pick(context, ["populate", "projecton", "session"]),
-            _.isNil
-          )
+        populate(
+          this.model.findOneAndUpdate(
+            context.query as any,
+            context.data as any,
+            _.omitBy(_.pick(context, ["projecton", "session"]), _.isNil)
+          ),
+          context.populate
         ),
       ...this.getHooks("after", "updateOne").map((func) => (response: any) =>
         func(context, response)
@@ -288,7 +298,10 @@ export class BaseModel<T extends Document> {
     const hooks: HookItem[] = _.get(this, "hooks", []);
     hooks.forEach((item) => {
       if (item.trigger === trigger && item.action === action) {
-        result.push(_.get(this, item.handler));
+        const h = _.get(this, item.handler);
+        if (h) {
+          result.push(h.bind(this));
+        }
       }
     });
     return result;
@@ -313,4 +326,94 @@ export class BaseModel<T extends Document> {
       this.model = connection.model(name, schema);
     }
   }
+
+  @Hook("before", "create", -1)
+  coreBeforeCreate(context: Context<T>) {
+    if (this.model.schema.path("createdBy") && context.state?.user) {
+      _.set(context, "data.createdBy", context.state.user.id);
+      _.set(context, "data.updatedBy", context.state.user.id);
+    }
+  }
+
+  @Hook("before", ["update", "updateOne"], -1)
+  coreBeforeUpdate(context: Context<T>) {
+    if (this.model.schema.path("updatedBy") && context.state?.user) {
+      _.set(context, "data.createdBy", context.state.user.id);
+    }
+
+    if (this.model.schema.path("updatedAt")) {
+      _.set(context, "data.updatedAt", Date.now());
+    }
+  }
+}
+
+export interface Timestamp {
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
+export interface Owner<T> {
+  createdBy?: string | T;
+  updatedBy?: string | T;
+}
+
+export const Timestamp = {
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+};
+
+export const Owner = {
+  createdBy: {
+    type: Types.ObjectId,
+    ref: "User",
+    required: false,
+  },
+  updatedBy: {
+    type: Types.ObjectId,
+    ref: "User",
+    required: false,
+  },
+};
+
+interface PopulateItem {
+  path?: string;
+  select?: string;
+  model?: string;
+}
+
+export function populate(query: any, populate: any) {
+  if (populate) {
+    const populateData: PopulateItem[] = buildPopulate(populate);
+    populateData.forEach((item) => {
+      query.populate(item);
+    });
+  }
+  return query;
+}
+
+function buildPopulate(populate: any): PopulateItem[] {
+  if (!Array.isArray(populate)) {
+    populate = populate.split(",");
+  }
+
+  populate = populate.map((item: any) => {
+    if (typeof item === "string") {
+      let [path, select, model] = item.split(":");
+      path = path || undefined;
+      select = select || undefined;
+      model = model || undefined;
+      return _.omitBy({ path, select, model }, _.isNil);
+    } else {
+      return item;
+    }
+  });
+
+  return populate;
 }

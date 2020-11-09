@@ -38,130 +38,138 @@ export interface RouterConfig {
   crud?: boolean | { [x: string]: CrudItem };
 }
 
-export function Router(config: RouterConfig, controler?: Controllers) {
-  config = _.defaultsDeep(config, {
-    base: "/",
-    middlewares: [],
-    routes: [],
-    crud: false,
-  });
+export class Router {
+  config!: RouterConfig;
+  controller!: Controllers;
+  middlewares: RequestHandler[] = [];
 
-  config.routes.map((route) => {
-    if (!_.isString(route.path)) {
-      throw new Error("path require in route");
+  constructor(config: RouterConfig, controller?: Controllers) {
+    this.config = config;
+    if (controller) {
+      this.controller = controller;
     }
-
-    if (
-      !["POST", "PUT", "GET", "DELETE", "PATH", "OPTIONS"].includes(
-        route.method
-      )
-    ) {
-      throw new Error(`Method ${route.method} not accepted!`);
-    }
-
-    if (!route.handler) {
-      throw new Error(`No handler for route ${route.path}`);
-    }
-
-    route = _.defaultsDeep(route, {
-      middlewares: [],
-      extend: true,
-    });
-
-    route.middlewares = [
-      ...(config.middlewares || []),
-      ...(route.middlewares || []),
-    ];
-
-    if (route.extend) {
-      route.path = path.join(config.base || "/", route.path);
-    }
-
-    return route;
-  });
-
-  if (config.crud) {
-    const df = {
-      list: {
-        name: "list",
-        path: "/",
-        method: "GET",
-        handler: "list",
-        middlewares: [],
-      },
-      find: {
-        name: "find",
-        path: "/find",
-        method: "GET",
-        handler: "find",
-        middlewares: [],
-      },
-      findOne: {
-        name: "findOne",
-        path: "/find-one",
-        method: "GET",
-        handler: "findOne",
-        middlewares: [],
-      },
-      create: {
-        name: "create",
-        path: "/",
-        method: "POST",
-        handler: "create",
-        middlewares: [],
-      },
-      update: {
-        name: "update",
-        path: "/",
-        method: "PUT",
-        handler: "update",
-        middlewares: [],
-      },
-      updateOne: {
-        name: "updateOne",
-        path: "/update-one",
-        method: "PUT",
-        handler: "updateOne",
-        middlewares: [],
-      },
-      delete: {
-        name: "delete",
-        path: "/",
-        method: "DELETE",
-        handler: "delete",
-        middlewares: [],
-      },
-    };
-
-    if (_.isBoolean(config.crud) && config.crud) {
-      // @ts-ignore
-      config.crud = df;
-    } else if (_.isBoolean(config.crud) && !config.crud) {
-      config.crud = false;
-    } else {
-      config.crud = _.defaultsDeep(config.crud, df);
-    }
-
-    Object.keys(config.crud as any).forEach((key: any) => {
-      // @ts-ignore
-      const c: CrudItem = config.crud[key];
-      // @ts-ignore
-      if (c === false) {
-        return;
-      }
-
-      config.routes.push({
-        method: c.method as RequestMethod,
-        path: path
-          .join(config.base || "/", c.path as string)
-          .replace(/\/$/, ""),
-        handler: _.get(controler, c.name as string) as any,
-        middlewares: c.middlewares,
-      });
-    });
   }
 
-  return config;
+  getConfig() {
+    const config: RouterConfig = _.defaultsDeep(this.config, {
+      base: "/",
+      routes: [],
+      crud: false,
+    });
+    config.middlewares = [...this.middlewares, ...(config.middlewares || [])];
+    config.routes.map((route) => {
+      if (!_.isString(route.path)) {
+        throw new Error("path require in route");
+      }
+
+      if (
+        !["POST", "PUT", "GET", "DELETE", "PATH", "OPTIONS"].includes(
+          route.method
+        )
+      ) {
+        throw new Error(`Method ${route.method} not accepted!`);
+      }
+
+      if (!route.handler) {
+        throw new Error(`No handler for route ${route.path}`);
+      }
+
+      route = _.defaultsDeep(route, {
+        middlewares: [],
+        extend: true,
+      });
+
+      route.middlewares = [...config.middlewares, ...route.middlewares];
+
+      if (route.extend) {
+        route.path = path.join(this.config.base || "/", route.path);
+      }
+      return route;
+    });
+
+    if (config.crud) {
+      const df = {
+        list: {
+          name: "list",
+          path: "/list",
+          method: "POST",
+          handler: "list",
+          middlewares: [] as any,
+        },
+        find: {
+          name: "find",
+          path: "/find",
+          method: "POST",
+          handler: "find",
+          middlewares: [] as any,
+        },
+        findOne: {
+          name: "findOne",
+          path: "/find-one",
+          method: "GET",
+          handler: "findOne",
+          middlewares: [] as any,
+        },
+        create: {
+          name: "create",
+          path: "/",
+          method: "POST",
+          handler: "create",
+          middlewares: [] as any,
+        },
+        update: {
+          name: "update",
+          path: "/",
+          method: "PUT",
+          handler: "update",
+          middlewares: [] as any,
+        },
+        updateOne: {
+          name: "updateOne",
+          path: "/update-one",
+          method: "PUT",
+          handler: "updateOne",
+          middlewares: [] as any,
+        },
+        delete: {
+          name: "delete",
+          path: "/",
+          method: "DELETE",
+          handler: "delete",
+          middlewares: [] as any,
+        },
+      };
+
+      if (_.isBoolean(config.crud) && config.crud) {
+        // @ts-ignore
+        config.crud = df;
+      } else if (_.isBoolean(config.crud) && !config.crud) {
+        config.crud = false;
+      } else {
+        config.crud = _.defaultsDeep(config.crud, df);
+      }
+
+      Object.keys(config.crud as any).forEach((key: any) => {
+        // @ts-ignore
+        const c: CrudItem = config.crud[key];
+        // @ts-ignore
+        if (c === false) {
+          return;
+        }
+
+        config.routes.push({
+          method: c.method as RequestMethod,
+          path: path
+            .join(this.config.base || "/", c.path as string)
+            .replace(/\/$/, ""),
+          handler: _.get(this.controller, c.name as string) as any,
+          middlewares: config.middlewares.concat(c.middlewares),
+        });
+      });
+    }
+
+    return config;
+  }
 }
 
 export function getRequestFunction(app: any, method: RequestMethod) {
@@ -184,19 +192,12 @@ export function getRequestFunction(app: any, method: RequestMethod) {
 }
 
 interface Controllers {
-  // @ts-ignore
   find?: RequestHandler;
-  // @ts-ignore
   list?: RequestHandler;
-  // @ts-ignore
   findOne?: RequestHandler;
-  // @ts-ignore
   update?: RequestHandler;
-  // @ts-ignore
   updateOne?: RequestHandler;
-  // @ts-ignore
   create?: RequestHandler;
-  // @ts-ignore
   delete?: RequestHandler;
   [x: string]: RequestHandler;
 }
@@ -210,64 +211,111 @@ function parseQuery(query: any) {
   return result;
 }
 
-export function Controller(config: Controllers, model: BaseModel<any>) {
-  if (model) {
-    config = {
-      list: async (req, res, next) => {
-        let params = req.method === "GET" ? parseQuery(req.query) : req.body;
-        params = _.defaultsDeep(params, {
-          query: {},
-          populate: [],
-        });
-        const context: Context = { ...params, state: req.state };
-        const response = await model.list(context);
-        res.json(response);
-      },
+export class Controller {
+  config!: Controllers;
+  model!: BaseModel<any>;
 
-      find: async (req, res, next) => {
-        const params = req.method === "GET" ? parseQuery(req.query) : req.body;
-        const context: Context = { ...params, state: req.state };
-        const response = await model.find(context);
-        res.json(response);
-      },
-
-      findOne: async (req, res, next) => {
-        const params = req.method === "GET" ? parseQuery(req.query) : req.body;
-        const context: Context = { ...params, state: req.state };
-        const response = await model.findOne(context);
-        res.json(response);
-      },
-
-      update: async (req, res, next) => {
-        const params = req.body;
-        const context: Context = { ...params, state: req.state };
-        const response = await model.update(context);
-        res.json(response);
-      },
-
-      updateOne: async (req, res, next) => {
-        const params = req.body;
-        const context: Context = { ...params, state: req.state };
-        const response = await model.updateOne(context);
-        res.json(response);
-      },
-
-      create: async (req, res, next) => {
-        const params = req.body;
-        const context: Context = { data: params, state: req.state };
-        const response = await model.create(context);
-        res.json(response);
-      },
-
-      delete: async (req, res, next) => {
-        const params = req.body;
-        const context: Context = { ...params, state: req.state };
-        const response = await model.update(context);
-        res.json(response);
-      },
-
-      ...config,
-    };
+  constructor(config: Controllers, model?: BaseModel<any>) {
+    this.config = config;
+    if (model) {
+      this.model = model;
+    }
   }
-  return config;
+
+  getConfig() {
+    let config: Controllers = {} as any;
+    if (this.model) {
+      config = {
+        list: async (req, res, next) => {
+          try {
+            let params =
+              req.method === "GET" ? parseQuery(req.query) : req.body;
+            params = _.defaultsDeep(params, {
+              query: {},
+              populate: [],
+            });
+            const context: Context<any> = { ...params, state: req.state };
+            const response = await this.model.list(context);
+            res.json(response);
+          } catch (error) {
+            next(error);
+          }
+        },
+
+        find: async (req, res, next) => {
+          try {
+            const params =
+              req.method === "GET" ? parseQuery(req.query) : req.body;
+            const context: Context<any> = { ...params, state: req.state };
+            const response = await this.model.find(context);
+            res.json(response);
+          } catch (error) {
+            next(error);
+          }
+        },
+
+        findOne: async (req, res, next) => {
+          try {
+            const params =
+              req.method === "GET" ? parseQuery(req.query) : req.body;
+            const context: Context<any> = { ...params, state: req.state };
+            const response = await this.model.findOne(context);
+            res.json(response);
+          } catch (error) {
+            next(error);
+          }
+        },
+
+        update: async (req, res, next) => {
+          try {
+            const params = req.body;
+            const context: Context<any> = { ...params, state: req.state };
+            const response = await this.model.update(context);
+            res.json(response);
+          } catch (error) {
+            next(error);
+          }
+        },
+
+        updateOne: async (req, res, next) => {
+          try {
+            const params = req.body;
+            const context: Context<any> = { ...params, state: req.state };
+            const response = await this.model.updateOne(context);
+            res.json(response);
+          } catch (error) {
+            next(error);
+          }
+        },
+
+        create: async (req, res, next) => {
+          try {
+            const params = req.body;
+            const context: Context<any> = { data: params, state: req.state };
+            const response = await this.model.create(context);
+            res.json(response);
+          } catch (error) {
+            next(error);
+          }
+        },
+
+        delete: async (req, res, next) => {
+          try {
+            const params = req.body;
+            const context: Context<any> = { ...params, state: req.state };
+            const response = await this.model.update(context);
+            res.json(response);
+          } catch (error) {
+            next(error);
+          }
+        },
+
+        ...this.config,
+      };
+    } else {
+      config = this.config;
+    }
+
+    return config;
+  }
 }
