@@ -1,5 +1,5 @@
-import { User } from "../auth/models/user.model";
+import { User } from '../auth/models/user.model';
 
 export interface State {
-  user: User;
+	user: User;
 }

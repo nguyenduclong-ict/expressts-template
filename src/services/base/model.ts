@@ -1,4 +1,3 @@
-import { BaseModel } from "@/helpers/base/model";
-import { Document } from "mongoose";
+import { BaseModel } from '@/helpers/base/model';
 
-export class AppModel<T extends Document> extends BaseModel<T> {}
+export class AppModel<T> extends BaseModel<T> {}

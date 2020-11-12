@@ -1,13 +1,13 @@
-import { BaseModel, Owner, Timestamp } from "@/helpers/base/model";
-import { Document, Schema } from "mongoose";
+import { BaseModel, Owner, Timestamp } from '@/helpers/base/model';
+import { Document, Schema } from 'mongoose';
 
 export interface Demo extends Document, Timestamp, Owner<any> {}
 
 const DemoSchema = new Schema<Demo>({
-  ...Timestamp,
-  ...Owner,
+	...Timestamp,
+	...Owner,
 });
 
 export class DemoModel extends BaseModel<Demo> {}
 
-export default new DemoModel("Demo", DemoSchema);
+export default new DemoModel('Demo', DemoSchema);

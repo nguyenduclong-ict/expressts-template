@@ -1,11 +1,11 @@
-import { TApp } from "@/helpers/base/server";
-import { Consola } from "consola";
+import { TApp } from '@/helpers/base/server';
+import { Consola } from 'consola';
 
-declare var tapp: TApp;
-declare var consola: Consola;
+declare let tapp: TApp;
+declare let consola: Consola;
 
 declare global {
-  var consola: Consola;
-  var tapp: TApp;
-  var _;
+	let consola: Consola;
+	let tapp: TApp;
+	let _;
 }

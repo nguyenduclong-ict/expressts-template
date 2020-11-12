@@ -1,31 +1,31 @@
 {
-  "roles": [
-    {
-      "permissions": [],
-      "isAdmin": false,
-      "name": "Customer",
-      "description": "Khách hàng",
-      "createdAt": "2020-11-08T10:39:06.000Z",
-      "updatedAt": "2020-11-08T10:39:06.000Z",
-      "id": "5fa7cebc474f5252e3c5dd10"
-    },
-    {
-      "permissions": [],
-      "isAdmin": false,
-      "name": "Shop Admin",
-      "description": "Shop Admin",
-      "createdAt": "2020-11-08T10:39:06.000Z",
-      "updatedAt": "2020-11-08T10:39:06.000Z",
-      "id": "5fa7cebc474f5252e3c5dd11"
-    },
-    {
-      "permissions": [],
-      "isAdmin": true,
-      "name": "Super Administator",
-      "description": "Super Administator",
-      "createdAt": "2020-11-08T10:37:29.000Z",
-      "updatedAt": "2020-11-08T10:37:30.000Z",
-      "id": "5fa7cebc474f5252e3c5dd12"
-    }
-  ]
+	"roles": [
+		{
+			"permissions": [],
+			"isAdmin": false,
+			"name": "Customer",
+			"description": "Khách hàng",
+			"createdAt": "2020-11-08T10:39:06.000Z",
+			"updatedAt": "2020-11-08T10:39:06.000Z",
+			"id": "5fa7cebc474f5252e3c5dd10"
+		},
+		{
+			"permissions": [],
+			"isAdmin": false,
+			"name": "Shop Admin",
+			"description": "Shop Admin",
+			"createdAt": "2020-11-08T10:39:06.000Z",
+			"updatedAt": "2020-11-08T10:39:06.000Z",
+			"id": "5fa7cebc474f5252e3c5dd11"
+		},
+		{
+			"permissions": [],
+			"isAdmin": true,
+			"name": "Super Administator",
+			"description": "Super Administator",
+			"createdAt": "2020-11-08T10:37:29.000Z",
+			"updatedAt": "2020-11-08T10:37:30.000Z",
+			"id": "5fa7cebc474f5252e3c5dd12"
+		}
+	]
 }
