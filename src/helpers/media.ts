@@ -1,8 +1,6 @@
 import fs, { Stats } from 'fs';
-import { ObjectId } from 'mongodb';
 import path from 'path';
 import request from 'request';
-import slugify from 'slugify';
 
 export const download = (url: string, savePath: string) => {
 	return new Promise((resolve) => {

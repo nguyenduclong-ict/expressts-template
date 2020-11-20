@@ -1,6 +1,6 @@
 import globby from 'globby';
-import path from 'path';
 import _ from 'lodash';
+import path from 'path';
 
 export function seqPromises(promises: any[]) {
 	return promises.reduce(
